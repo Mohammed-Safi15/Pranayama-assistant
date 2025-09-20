@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pranayama Assistant - Alternate Nostril Breathing</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>Pranayama Assistant</h1>
+            <p>Alternate Nostril Breathing Practice</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel - Practice Interface -->
+            <div class="practice-panel">
+                <div class="breathing-guide">
+                    <div class="breathing-circle" id="breathingCircle"></div>
+                    <div class="breathing-counter">
+                        <div class="count-display" id="countDisplay">4</div>
+                        <div class="phase-indicator" id="phaseIndicator">Prepare</div>
+                    </div>
+                </div>
+
+                <div class="nostril-indicator">
+                    <div class="nostril-display">
+                        <div class="nostril left" id="leftNostril">
+                            <div class="nostril-circle"></div>
+                            <span>Left</span>
+                        </div>
+                        <div class="nostril right active" id="rightNostril">
+                            <div class="nostril-circle"></div>
+                            <span>Right</span>
+                        </div>
+                    </div>
+                    <div class="current-action" id="currentAction">Close right nostril, exhale through left</div>
+                </div>
+
+                <div class="session-controls">
+                    <button class="btn btn--primary btn--lg" id="startBtn">Start Practice</button>
+                    <button class="btn btn--secondary" id="pauseBtn" disabled>Pause</button>
+                    <button class="btn btn--outline" id="stopBtn" disabled>Stop</button>
+                </div>
+
+                <div class="session-info">
+                    <div class="info-item">
+                        <span class="label">Session Time:</span>
+                        <span class="value" id="sessionTime">00:00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Breath Cycles:</span>
+                        <span class="value" id="breathCycles">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Monitoring Dashboard -->
+            <div class="monitoring-panel">
+                <div class="video-container">
+                    <video id="videoElement" autoplay muted playsinline></video>
+                    <canvas id="overlayCanvas"></canvas>
+                    <div class="camera-status" id="cameraStatus">
+                        <div class="status-icon">📷</div>
+                        <span>Initializing camera...</span>
+                    </div>
+                </div>
+
+                <div class="monitoring-stats">
+                    <div class="stat-card posture-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Posture</span>
+                            <div class="status status--success" id="postureStatus">Good</div>
+                        </div>
+                        <div class="posture-indicators">
+                            <div class="indicator">
+                                <span>Spine:</span>
+                                <div class="indicator-bar">
+                                    <div class="indicator-fill" id="spineIndicator"></div>
+                                </div>
+                            </div>
+                            <div class="indicator">
+                                <span>Shoulders:</span>
+                                <div class="indicator-bar">
+                                    <div class="indicator-fill" id="shoulderIndicator"></div>
+                                </div>
+                            </div>
+                            <div class="indicator">
+                                <span>Head:</span>
+                                <div class="indicator-bar">
+                                    <div class="indicator-fill" id="headIndicator"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card eye-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Eye Status</span>
+                            <div class="status status--success" id="eyeStatus">Closed</div>
+                        </div>
+                        <div class="eye-indicators">
+                            <div class="eye-icon" id="leftEye">👁️</div>
+                            <div class="eye-icon" id="rightEye">👁️</div>
+                        </div>
+                        <div class="eye-alerts" id="eyeAlerts">0 alerts this session</div>
+                    </div>
+
+                    <div class="stat-card feedback-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Real-time Feedback</span>
+                        </div>
+                        <div class="feedback-messages" id="feedbackMessages">
+                            <div class="feedback-message">Position yourself comfortably and press Start</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settingsPanel">
+            <div class="settings-content">
+                <div class="settings-header">
+                    <h3>Practice Settings</h3>
+                    <button class="btn btn--outline btn--sm" id="closeSettings">Close</button>
+                </div>
+                
+                <div class="settings-group">
+                    <label class="form-label">Breathing Pace (seconds)</label>
+                    <select class="form-control" id="breathingPace">
+                        <option value="4">4 seconds</option>
+                        <option value="5">5 seconds</option>
+                    </select>
+                </div>
+
+                <div class="settings-group">
+                    <label class="form-label">Audio Volume</label>
+                    <input type="range" class="form-control" id="audioVolume" min="0" max="100" value="70">
+                </div>
+
+                <div class="settings-group">
+                    <label class="form-label">Posture Sensitivity</label>
+                    <select class="form-control" id="postureSensitivity">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+
+                <div class="settings-group">
+                    <label class="form-label">Practice Duration (minutes)</label>
+                    <select class="form-control" id="practiceLimit">
+                        <option value="0">Unlimited</option>
+                        <option value="5">5 minutes</option>
+                        <option value="10" selected>10 minutes</option>
+                        <option value="15">15 minutes</option>
+                        <option value="20">20 minutes</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Toggle -->
+        <button class="settings-toggle" id="settingsToggle">⚙️</button>
+
+        <!-- Permission Modal -->
+        <div class="modal hidden" id="permissionModal">
+            <div class="modal-content">
+                <h3>Camera Permission Required</h3>
+                <p>This app needs access to your camera to provide real-time posture and eye monitoring during your breathing practice.</p>
+                <div class="modal-actions">
+                    <button class="btn btn--primary" id="enableCamera">Enable Camera</button>
+                    <button class="btn btn--outline" id="continueWithoutCamera">Continue Without Camera</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Screen -->
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h3>Initializing Pranayama Assistant</h3>
+                <p id="loadingStatus">Loading MediaPipe models...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
